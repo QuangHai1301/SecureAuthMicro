@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý người dùng</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        #userList {
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        button {
+            margin: 2px;
+            padding: 5px 10px;
+        }
+
+        #addUserForm {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Quản lý người dùng</h1>
+    <button onclick="showAddUserForm()">Thêm người dùng mới</button>
+    <div id="userList">Đang tải danh sách người dùng...</div>
+
+    <div id="addUserForm" style="display:none;">
+        <input type="hidden" id="editUserId">
+        <input type="text" id="username" placeholder="Tên đăng nhập">
+        <input type="password" id="_password" placeholder="Mật khẩu">
+        <input type="password" id="password_repeat" placeholder="Nhập lại mật khẩu">
+        <button type="button" onclick="saveUser1()">Lưu</button>
+        <button type="button" onclick="cancelEdit()">Hủy</button>
+    </div>
+    <div id="decrypt">
+        <a>ciphertext</a>
+        <input type="text" id="ciphertxt">
+        <a>key</a>
+        <input type="text" id="key">
+        <a>iv</a>
+        <input type="text" id="iv">
+        <button type="submit" onclick="decryptdata()">Giải mã</button>
+        <p id="result"></p>
+    </div>
+    <div id="dencrpyptRSA">
+            <h1>RSA Algorithm</h1>
+            <h2>Implemented Using HTML & Javascript</h2>
+            <hr>
+            <table>
+                <tr>
+                    <td>nhập chữ kí số của bạn:<br>ex: "your name"</td>
+                    <td><input type="string" value="" id="msg"></p>
+                    </td>
+                </tr>
+               
+                <tr>
+                    <td>mã xác thực "Public Key" từ chữ kí số là:</td>
+                    <td>
+                        <p id="publickey"></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <p id="exponent"></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td id="phi_n"></td>
+                </tr>
+                <tr>
+                    <td>mã xác thực "Private Key" từ chữ kí số là:</td>
+                    <td>
+                        <p id="privatekey"></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <p></p>
+                    </td>
+                </tr>
+                <tr>
+                    <td><button onclick="RSA();">Apply RSA</button></td>
+                </tr>
+            </table>
+    </div>
+
+    <script type="text/javascript">
+        function RSA() {
+            var gcd, p, q, str_, no, n, t, e, i, x, s, phi;
+            gcd = function (a, b) { return (!b) ? a : gcd(b, a % b); };
+            p = 53;
+            q = 59;
+            str_ = document.getElementById('msg').value;
+            no = "";
+            for (s = 0; s < str_.length; s++) {
+
+                no += str_.charCodeAt(s).toString();
+            }
+            no = parseInt(no);
+            n = p * q;
+            t = (p - 1) * (q - 1);
+            for (e = 2; e < t; e++) {
+                if (gcd(e, t) == 1) {
+                    break;
+                }
+            }
+            for (i = 0; i < 10; i++) {
+                x = 1 + i * t
+                if (x % e == 0) {
+                    d = x / e;
+                    break;
+                }
+            }
+            ctt = Math.pow(no, e).toFixed(0);
+            ct = ctt % n;
+            dtt = Math.pow(ct, d).toFixed(0);
+            dt = dtt % n;
+            phi = "1 < " + e + " < " + t;
+            encode = "Encode Message - " + str_ + ":";
+
+            document.getElementById('publickey').innerHTML = n;
+            document.getElementById('exponent').innerHTML = e;
+            document.getElementById('privatekey').innerHTML = d;
+            document.getElementById('ciphertext').innerHTML = dtt;
+            document.getElementById('encodeMess').innerHTML = no;
+            document.getElementById('labelEncode').innerHTML = encode;
+            document.getElementById('phi_n').innerHTML = phi;
+        }
+    </script>
+    <script>
+        let users = [];
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', getUsers);
+
+        function showAddUserForm() {
+            document.getElementById('addUserForm').style.display = 'block';
+            document.getElementById('editUserId').value = '';
+            document.getElementById('username').value = '';
+            document.getElementById('_password').value = '';
+        }
+
+
+        function cancelEdit() {
+            document.getElementById('addUserForm').style.display = 'none';
+        }
+
+        async function getUsers() {
+            const userListDiv = document.getElementById('userList');
+
+            if (!token) {
+                userListDiv.textContent = 'Không tìm thấy token. Vui lòng đăng nhập lại.';
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:19006/api/list-users', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    users = data.result;
+                    renderUserList();
+                } else {
+                    userListDiv.textContent = 'Không thể lấy danh sách người dùng: ' + data.message;
+                    if (response.status === 401) {
+                        setTimeout(() => {
+                            window.location.href = 'login.html';
+                        }, 2000);
+                    }
+                }
+            } catch (error) {
+                userListDiv.textContent = 'Lỗi: ' + error.message;
+            }
+        }
+
+        function renderUserList() {
+            const userListDiv = document.getElementById('userList');
+            let userListHTML = '<table><tr><th>ID</th><th>Tên đăng nhập</th><th>Hành động</th></tr>';
+            users.forEach(user => {
+                userListHTML += `
+                    <tr>
+                        <td>${user.id}</td>
+                        <td>${user.usersname}</td>
+                        <td>
+                            <button onclick="editUser(${user.id}, '${user.usersname}')">Sửa</button>
+                            <button onclick="deleteUser('${user.usersname}')">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            userListHTML += '</table>';
+            userListDiv.innerHTML = userListHTML;
+        }
+
+
+         function editUser(userId) {
+            const user = users.find(u => u.id === userId);
+            if (user) {
+                document.getElementById('editUserId').value = user.id;
+                document.getElementById('username').value = user.usersname;
+                document.getElementById('_password').value = '';
+                document.getElementById('addUserForm').style.display = 'block';
+            }
+        }
+
+        async function saveUser1() {
+            const userId = document.getElementById('editUserId').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('_password').value;
+            console.log("passfromhtml:", password);
+            const password_repeat = document.getElementById('password_repeat').value;
+            if (!userId) {
+                // Thêm mới người dùng
+                try {
+                    const response = await fetch('http://localhost:19006/api/sign-up', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            username,
+                            password,
+                            password_repeat,
+                        })
+                    });
+                    saveUser();   
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert('Thêm người dùng thành công');
+                        getUsers();
+                        cancelEdit();
+                    } else {
+                        alert('Lỗi: ' + data.message);
+                    }
+                } catch (error) {
+                    alert('Lỗi: ' + error.message);
+                }
+            } else {
+                // Cập nhật người dùng
+                try {
+                    const response = await fetch(`http://localhost:19006/api/update?id=${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({ username, password, password_repeat })
+                    });
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert(data.message);
+                        getUsers();
+                        cancelEdit();
+                    } else {
+                        alert('Lỗi: ' + data.message);
+                    }
+                } catch (error) {
+                    alert('Lỗi: ' + error.message);
+                }
+            }
+        }
+
+
+        async function saveUser() {
+            const userId = document.getElementById('editUserId').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('_password').value;
+            const password_repeat = document.getElementById('password_repeat').value;
+
+            if (password !== password_repeat) {
+                alert('Mật khẩu nhập lại không khớp');
+                return;
+            }
+
+            try {
+                if (!userId) {
+                    // Thêm mới người dùng
+                    const response = await fetch('http://localhost:19006/api/encrypt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            username,
+                            password,
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert('Thêm người dùng thành công');
+                        getUsers();
+                        cancelEdit();
+                    } else {
+                        alert('Lỗi: ' + data.message);
+                    }
+                } else {
+                    // Cập nhật người dùng
+                    const response = await fetch(`http://localhost:19006/api/update?id=${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            username,
+                            password
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert(data.message);
+                        getUsers();
+                        cancelEdit();
+                    } else {
+                        alert('Lỗi: ' + data.message);
+                    }
+                }
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            }
+        }
+
+        async function decryptdata() {
+            const key = document.getElementById('key').value;
+            const iv = document.getElementById('iv').value;
+            const ciphertxt = document.getElementById('ciphertxt').value;
+
+            const response = await fetch('http://localhost:19006/api/dencrypt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ key, iv, ciphertxt }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.decryptedMessage) {
+                        document.getElementById('result').textContent = 'Decrypted message: ' + data.decryptedMessage;
+                    } else if (data.error) {
+                        document.getElementById('result').textContent = 'Error: ' + data.error;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('result').textContent = 'Error: ' + error.message;
+
+                });
+        }
+
+     
+
+        async function deleteUser(username) {
+            if (confirm(`Bạn có chắc chắn muốn xóa người dùng "${username}"?`)) {
+                try {
+                    const response = await fetch('http://localhost:19006/api/delete', {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({ username })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        alert(data.message);
+                        getUsers();
+                    } else {
+                        alert('Lỗi: ' + data.message);
+                    }
+                } catch (error) {
+                    alert('Lỗi: ' + error.message);
+                }
+            }
+        }
+
+        async function encryptPassword1() {
+
+            const password = document.getElementById('_password').value;
+            try {
+                const response = await fetch('http://localhost:19006/api/encrypt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+                const data = await response.json();
+                return data; // This will return { ciphertext, key, iv }
+            } catch (error) {
+                console.error('Lỗi khi mã hóa mật khẩu:', error);
+                throw error;
+            }
+        }
+
+        async function encryptPassword(password) {
+            try {
+                const response = await fetch('http://localhost:19006/api/encrypt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: password })
+                });
+                const data = await response.json();
+                return data; // Giả sử trả về { ciphertext, key, iv }
+            } catch (error) {
+                console.error('Lỗi khi mã hóa mật khẩu:', error);
+                throw error;
+            }
+        }
+
+    </script>
+</body>
+
+</html>
